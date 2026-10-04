@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radar de Ofertas</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+        body { background: #f4f4f9; color: #333; padding: 20px; }
+        header { text-align: center; margin-bottom: 30px; position: relative; }
+        header h1 { color: #ff4500; font-size: 2rem; }
+        
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        .btn-admin-toggle { position: absolute; top: 0; right: 0; background: #ddd; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; color: #555; }
+        .btn-admin-toggle:hover { background: #ccc; }
+
+        .form-card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 30px; display: none; border-left: 4px solid #ff4500; }
+        .form-card h2 { font-size: 1.2rem; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-fechar { background: none; border: none; color: #999; cursor: pointer; font-size: 1rem; width: auto; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 4px; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        
+        button[type="submit"] { background: #ff4500; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        button[type="submit"]:hover { background: #e03d00; }
+
+        .grid-ofertas { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .card img { width: 100%; height: 180px; object-fit: cover; background: #eee; }
+        .card-content { padding: 15px; display: flex; flex-direction: column; flex-grow: 1; justify-content: space-between; }
+        .card h3 { font-size: 1.1rem; margin-bottom: 10px; color: #222; }
+        .card .preco { font-size: 1.3rem; font-weight: bold; color: #008000; margin-bottom: 15px; }
+        
+        .card-actions { display: flex; gap: 8px; flex-direction: column; }
+        .btn-comprar { display: block; text-align: center; background: #007bff; color: #fff; text-decoration: none; padding: 8px; border-radius: 4px; font-weight: bold; }
+        .btn-comprar:hover { background: #0056b3; }
+        
+        .btn-whatsapp { display: block; text-align: center; background: #25d366; color: #fff; text-decoration: none; padding: 8px; border-radius: 4px; font-weight: bold; font-size: 0.9rem; }
+        .btn-whatsapp:hover { background: #1ebe5d; }
+
+        /* Botão de Excluir (Oculto por padrão, aparece quando logado como admin) */
+        .btn-excluir { display: none; background: #dc3545; color: #fff; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; text-align: center; width: 100%; }
+        .btn-excluir:hover { background: #c82333; }
+        .modo-admin .btn-excluir { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="paginaPrincipal">
+        <header>
+            <button class="btn-admin-toggle" onclick="pedirSenha()">Painel do Editor</button>
+            <h1>🔥 Radar de Ofertas</h1>
+            <p>As melhores promoções atualizadas para você</p>
+        </header>
+
+        <!-- Painel do Editor -->
+        <div class="form-card" id="painelEditor">
+            <h2>
+                Adicionar Nova Oferta
+                <button class="btn-fechar" onclick="fecharPainel()">✕ Fechar</button>
+            </h2>
+            <form id="formOferta">
+                <div class="form-group">
+                    <label>Nome do Produto:</label>
+                    <input type="text" id="titulo" placeholder="Ex: Smartphone X 128GB" required>
+                </div>
+                <div class="form-group">
+                    <label>Preço:</label>
+                    <input type="text" id="preco" placeholder="Ex: R$ 999,90" required>
+                </div>
+                <div class="form-group">
+                    <label>Link da Imagem (Copiar endereço da imagem):</label>
+                    <input type="url" id="imagem" placeholder="https://..." required>
+                </div>
+                <div class="form-group">
+                    <label>Link de Afiliado / Oferta:</label>
+                    <input type="url" id="link" placeholder="https://..." required>
+                </div>
+                <button type="submit">Publicar Oferta</button>
+            </form>
+        </div>
+
+        <!-- Lista de Ofertas -->
+        <div class="grid-ofertas" id="listaOfertas"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('formOferta');
+        const lista = document.getElementById('listaOfertas');
+        const painelEditor = document.getElementById('painelEditor');
+        const paginaPrincipal = document.getElementById('paginaPrincipal');
+
+        let ofertas = JSON.parse(localStorage.getItem('radar_ofertas')) || [];
+        const senhaAdmin = "1234";
+
+        function pedirSenha() {
+            let senha = prompt("Digite a senha de editor:");
+            if (senha === senhaAdmin) {
+                painelEditor.style.display = "block";
+                paginaPrincipal.classList.add('modo-admin'); // Libera os botões de excluir
+                alert("Modo Editor ativado! Agora você pode excluir ofertas.");
+            } else if (senha !== null) {
+                alert("Senha incorreta!");
+            }
+        }
+
+        function fecharPainel() {
+            painelEditor.style.display = "none";
+        }
+
+        function excluirOferta(index) {
+            if (confirm("Tem certeza que deseja excluir esta oferta?")) {
+                ofertas.splice(index, 1); // Remove o item da lista
+                localStorage.setItem('radar_ofertas', JSON.stringify(ofertas));
+                renderizarOfertas();
+            }
+        }
+
+        function renderizarOfertas() {
+            lista.innerHTML = '';
+            ofertas.forEach((oferta, index) => {
+                const textoZap = `🔥 *OLHA ESSA OFERTA!* 🔥\n\n📦 *${oferta.titulo}*\n💰 Por apenas: *${oferta.preco}*\n\n👉 Garanta a sua aqui:\n${oferta.link}`;
+                const linkZap = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoZap)}`;
+
+                lista.innerHTML += `
+                    <div class="card">
+                        <img src="${oferta.imagem}" alt="${oferta.titulo}" onerror="this.src='https://via.placeholder.com/300x180?text=Sem+Foto'">
+                        <div class="card-content">
+                            <div>
+                                <h3>${oferta.titulo}</h3>
+                                <div class="preco">${oferta.preco}</div>
+                            </div>
+                            <div class="card-actions">
+                                <a href="${oferta.link}" target="_blank" class="btn-comprar">Ver Oferta</a>
+                                <a href="${linkZap}" target="_blank" class="btn-whatsapp">📲 Enviar pro WhatsApp</a>
+                                <button class="btn-excluir" onclick="excluirOferta(${index})">🗑️ Excluir Oferta</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const novaOferta = {
+                titulo: document.getElementById('titulo').value,
+                preco: document.getElementById('preco').value,
+                imagem: document.getElementById('imagem').value,
+                link: document.getElementById('link').value
+            };
+
+            ofertas.unshift(novaOferta);
+            localStorage.setItem('radar_ofertas', JSON.stringify(ofertas));
+            
+            renderizarOfertas();
+            form.reset();
+            alert("Oferta publicada com sucesso!");
+        });
+
+        renderizarOfertas();
+    </script>
+
+</body>
+</html>
